@@ -6,7 +6,7 @@
 ***
 
 ![这是图片](./figure/framework.png)
-
+In this work, we proposed a full-stack, precise, longitudinally-consistent framework, BrainParc, for unified lifespan brain parcellation. 
 
 ## [<font color=#F8B48F size=3>License</font> ](./LICENSE)
 ```shell
