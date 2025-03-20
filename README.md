@@ -5,7 +5,7 @@
 
 ***
 
-![这是图片](./Figures/framework.pdf)
+![这是图片](./figure/framework.png)
 
 
 ## [<font color=#F8B48F size=3>License</font> ](./LICENSE)
