@@ -1,3 +1,6 @@
 antspyx
 SimpleITK
 torch
+easydict
+tqdm
+scipy

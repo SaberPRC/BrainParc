@@ -4,9 +4,37 @@
 > "BrainParc: Unified Lifespan Brain Parcellation from Structural MR Images", [Jiameng Liu, Feihong Liu, Kaicong Sun, Zhiming Cui, Tianyang Sun, Zehong Cao, Jiawei Huang, Shuwei Bai, Yulin Wang, Kaicheng Zhang, Caiwen Jiang, Yuyan Ge, Han Zhang, Feng Shi and <u>Dinggang Shen</u>]
 
 ***
+<div style="text-align: center">
+  <img src="figure/framework.png" width="70%" alt="BrainParc Framework">
+</div>
 
-![这是图片](./figure/framework.png)
-In this work, we proposed a full-stack, precise, longitudinally-consistent framework, BrainParc, for unified lifespan brain parcellation. 
+In this work, we proposed a full-stack, precise, longitudinally-consistent framework, BrainParc, for unified lifespan brain parcellation. Please find the following steps for implementation of this work.
+
+### Step1: Data Preparation
+* Organize the data in the following format
+    ```shell
+  Expriment
+  ├── csvfile
+  │   └── file_list.csv
+  ├── data
+  │   ├── HCPA
+  │   │   └── sub0001
+  │   │       ├── brain_sober.nii.gz
+  │   │       ├── brain.nii.gz
+  │   │       ├── dk-struct.nii.gz
+  │   │       ├── persudo_brain.nii.gz
+  │   │       ├── skull-strip.nii.gz
+  │   │       ├── T1w.nii.gz
+  │   │       └── tissue.nii.gz
+  │   ├── HCPD
+  │   └── HCPY
+  └── Results
+      ├── BET
+      └── BrainParc
+          ├── checkpoints
+          ├── log
+          └── pred
+  ```
 
 ## [<font color=#F8B48F size=3>License</font> ](./LICENSE)
 ```shell
@@ -22,3 +50,4 @@ Repo for BrainParc: Unified Lifespan Brain Parcellation from Structural MR Image
 Contact: JiamengLiu.PRC@gmail.com
 ```
 
+p
