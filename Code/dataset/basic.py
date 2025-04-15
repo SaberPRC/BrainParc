@@ -103,6 +103,22 @@ def _normalize_z_score(data, clip=True):
     return (data - data.mean()) / data.std()
 
 
+def _sitk_img_info(img_path):
+    '''
+    TODO: Functions to load medical image using SimpleITK and get fundamental informations
+    :param img_path: absolute image path end with: .nii.gz, .mhd, .hdr
+    :return: origin, spacing, direction, image numpy array
+    '''
+    img = sitk.ReadImage(img_path)
+    origin = img.GetOrigin()
+    spacing = img.GetSpacing()
+    direction = img.GetDirection()
+    data = sitk.GetArrayFromImage(img)
+    data = data.transpose(2,1,0)
+    return origin, spacing, direction, data
+
+
+
 def _train_test_split(file_list, fold, type='train'):
     test_fold = fold
     if fold + 1 > 5:

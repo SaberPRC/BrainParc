@@ -10,14 +10,8 @@ __C.general = {}
 ####### config file in BME-cluster
 __C.general_bme = {}
 __C.general_bme.file_list = 'file_list.csv'
-__C.general_bme.root = '/public_bme/home/liujm/BrainParc/'
-__C.general_bme.save_root = '/public_bme/home/liujm/BrainParc/Results/Lifespan'
-
-####### config file in Local server
-__C.general_local = {}
-__C.general_local.file_list = 'file_list_lifespan.csv'
-__C.general_local.root = '/public/home/liujm1/BrainParc'
-__C.general_local.save_root = '/public/home/liujm1/BrainParc/Results/Parc'
+__C.general_bme.root = '/path/to/experiment/root'
+__C.general_bme.save_root = '/path/to/save/training/Results'
 
 
 ###### training parameters
@@ -28,6 +22,7 @@ __C.train.batch_size=1
 __C.train.lr = 2e-4
 __C.train.save_epoch = 1
 
+# adaptive-weight for each brain region
 __C.train.alpha = [0.4, 0.83480081, 0.835039219, 0.855442264, 0.856849387, 0.903668944, 0.899960582, 0.801572131, 0.805305151, 0.827592272, 0.826400611,
 0.882260885, 0.88239142, 0.951479735, 0.948034505, 0.87013273, 0.870727194, 0.887590081, 0.886863638, 0.896744106, 0.902931944,
 0.926612064, 0.917610825, 0.906178716, 0.899176097, 0.87300197, 0.871077487, 0.921040548, 0.929387065, 0.935497519, 0.92898779,
@@ -52,7 +47,6 @@ __C.loss.gamma = 2
 
 # resume_epoch == -1 training from scratch
 __C.general.resume_epoch = -1
-
 
 # random seed
 __C.general.seed = 42

@@ -17,13 +17,11 @@ class ParcBaseMS(torch.utils.data.Dataset):
         self.root = root
         self.type = type
         self.crop_size = crop_size
-        # TODO: Train Test Split
         file_list = os.path.join(root, 'csvfile', file_list)
         self.file_list = _train_test_split(file_list, fold, type)
 
     def __getitem__(self, idx):
         file_name, folder = self.file_list[idx][0], self.file_list[idx][1]
-        # TODO: NiTI data loader
         img_path = os.path.join(self.root, 'data', folder, file_name, 'brain.nii.gz')
         edge_path = os.path.join(self.root, 'data', folder, file_name, 'brain_sober.nii.gz')
         tissue_path = os.path.join(self.root, 'data', folder, file_name, 'tissue.nii.gz')
@@ -37,23 +35,23 @@ class ParcBaseMS(torch.utils.data.Dataset):
         img = _normalize_z_score(img)
         edge = _normalize_z_score(edge)
 
-        # TODO: Padding for Multi-scale Framework
         img = np.pad(img, ((32, 32), (32, 32), (32, 32)), 'constant')
         edge = np.pad(edge, ((32, 32), (32, 32), (32, 32)), 'constant')
         tissue = np.pad(tissue, ((32, 32), (32, 32), (32, 32)), 'constant')
 
         if self.type == 'train':
             dk = np.pad(dk, ((32, 32), (32, 32), (32, 32)), 'constant')
-            # TODO: Random select a crop patch start point
-            start_pos = _mask_seed(tissue, self.crop_size)
 
-            # TODO: Patch crop based on selected seed and convert to pytorch tensor
+            if random.random() > 0.1:
+                start_pos = _mask_seed(tissue, self.crop_size)
+            else:
+                start_pos = _random_seed(tissue, self.crop_size)
+
             img_cropped = _crop_and_convert_to_tensor(img, start_pos, self.crop_size)
             edge_cropped = _crop_and_convert_to_tensor(edge, start_pos, self.crop_size)
             tissue_cropped = _crop_and_convert_to_tensor(tissue, start_pos, self.crop_size)
             dk_cropped = _crop_and_convert_to_tensor(dk, start_pos, self.crop_size)
 
-            # TODO: Extract ground-truth boundary for supervision on spatial consistency
             tissue_cropped_one_hot = tissue_cropped.squeeze(0).type(torch.long)
             tissue_cropped_one_hot = F.one_hot(tissue_cropped_one_hot, 4)
             tissue_cropped_one_hot = tissue_cropped_one_hot.permute(3, 0, 1, 2)
