@@ -758,7 +758,6 @@ def _get_pred_parallel(args, model, source, target, item):
     ants.image_write(pred_parc, target_dk_path)
 
 
-
 if __name__ == '__main__':
     import multiprocessing
     from multiprocessing import Pool
@@ -785,4 +784,6 @@ if __name__ == '__main__':
     model = _model_init(args, args.model_path)
 
     _get_pred_parallel(args, model, args.input_brain, args.input_edge, args.output_tissue, args.output_dk)
+
+
 

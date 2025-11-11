@@ -11,16 +11,20 @@ Official implementation of Unified Lifespan Brain Region Parcellation from Struc
   <img src="figure/abstract_figure.bmp" width="90%" alt="BrainParc Framework">
 </div>
 
+***
+
 ### Main Framework
+The entire BrainParc framework includes two parts:
+1. **`Brain extraction:`** Prerequisit for following brain tissue segmentation and region parcellation. We designed and trained an Automatic skull-strip (AutoStrip) method for lifespan T1w MRI data.
+
+    * You can find the detailed implementation and pretrained model of AutoStrip can in this [Repo](https://github.com/SaberPRC/AutoStrip). This repo mainly introduce the implementation details of the tissue segmentation and region parcellation part of **BrainParc**.
+
+2. **`Tissue segmentation and region parcellation`**: Unified Lifespan Brain Region Parcellation (BrainParc) framework which leverage the anatomical information invariant to intensity and contrast, enabling accurate, robust, and longitudinally consistent parcellation across heterogeneous dataset without the need for fine-tuning.
+
 <div style="text-align: center">
   <img src="figure/framework.bmp" width="90%" alt="BrainParc Framework">
 </div>
-The entire BrainParc framework includes two parts:
-1. **Brain extraction:** Automatic skull-strip (AutoStrip) method for lifespan T1w MRI data
 
-    * The implementation and pretrained weight for AutoStrip can be find in this [Repo](https://github.com/SaberPRC/AutoStrip), we didn's include this part in this repo.
-
-2. **Tissue segmentation and region parcellation**: Unified Lifespan Brain Region Parcellation (BrainParc) framework which leverage the anatomical information invariant to intensity and contrast, enabling accurate, robust, and longitudinally consistent parcellation across heterogeneous dataset without the need for fine-tuning.
 
 The illsutration of BrainParc is shown in 
 
