@@ -25,39 +25,87 @@ The entire BrainParc framework includes two parts:
   <img src="figure/framework.bmp" width="90%" alt="BrainParc Framework">
 </div>
 
+***
+### Implementation and Model Training
+**`Step 1: Data Preparation`** Organize your project directory as follows to reproduce **BrainParc** on your own data
 
-The illsutration of BrainParc is shown in 
+```shell
+Experiments/
+├── csvfile/                     # Training, validation, & testing splits
+│   └── file_list.csv            # Each line: [IDs, folder, fold]
+├── data/                        # Data folder
+│   ├── HCPA/
+│   │   └── sub001/
+│   │       ├── brain.nii.gz      # skull-stripped T1w data
+│   │       ├── tissue.nii.gz     # ground-truth tissue maps
+│   │       └── dk-struct.nii.gz  # ground-truth dk struture maps
+│   ├── HCPD/
+│   └── HCPY/
+└── Results/
+    └── BrainParc/
+        ├── checkpoints/        # Saved every 10 epochs
+        ├── log/
+        │   └── log
+        └── pred/               # Validation results per epoch
+```
 
-### Data Preparation
-* Organize the data in the following format
-    ```shell
-  Expriment # root folder
-  ├── csvfile # folder to save training list
-  │   └── file_list.csv # file list with following format [IDs, folder, fold], IDs: data name; folder: data center; fold: five fold cross-validation.
-  ├── data # folder to save training data
-  │   ├── HCPA # data center folder
-  │   │   └── sub0001 # data folder
-  │   │       ├── brain_sober.nii.gz # Sober egde maps
-  │   │       ├── brain.nii.gz # Intensity image with skull-stripping
-  │   │       ├── dk-struct.nii.gz # dk-struct 
-  │   │       ├── persudo_brain.nii.gz # Pseudo brain for brain extraction
-  │   │       ├── skull-strip.nii.gz # Brain mask
-  │   │       ├── T1w.nii.gz # Intensity image without skull-stripping
-  │   │       └── tissue.nii.gz # Tissue maps
-  │   ├── HCPD # data center folder
-  │   └── HCPY # data center folder
-  └── Results # folder to save checkpoint and log file
-      ├── BET # folder to save skull-stripping results and checkpoints
-      └── BrainParc # folder to save brain parcellation results and checkpoints
-          ├── checkpoints # folder to save checkpoint
-          ├── log # folder to save logging information
-          └── pred # folder to save results of validation set
+
+#### **Note:** The relative training, testing, and validation split should be recorded in `file_list.csv`. The example for `file_list.csv` is shown below:
+
+<div align="center" style="width:100%; margin:auto;">
+
+<table style="width:80%; text-align:center; border-collapse:collapse;">
+  <tr>
+    <th>IDs</th>
+    <th>folder</th>
+    <th>fold</th>
+  </tr>
+  <tr><td>sub001</td><td>HCPY</td><td>1</td></tr>
+  <tr><td>sub002</td><td>HCPY</td><td>2</td></tr>
+  <tr><td>sub003</td><td>HCPY</td><td>3</td></tr>
+  <tr><td>sub001</td><td>HCPD</td><td>1</td></tr>
+  <tr><td>sub002</td><td>HCPD</td><td>2</td></tr>
+  <tr><td>sub003</td><td>HCPD</td><td>3</td></tr>
+  <tr><td>sub004</td><td>HCPD</td><td>3</td></tr>
+  <tr><td>sub001</td><td>HCPA</td><td>3</td></tr>
+</table>
+
+</div>
+where folder denote for different datasets and fold used for the training (fold=3), testing (fold=1), and validation (fold=2) split.
+
+
+### Step 2: Data Prepocessing
+You are required performing the following steps for training BrainParc using your own data:
+* `Brain Extraction:` Please first remove brain skull using our [AutoStrip](https://github.com/SaberPRC/AutoStrip).
+
+* `Edge Extraction:` Extracte the brain edge maps using sobel filter, you can refer to this [script](./Code/Inference/Step01_Intensity_2_Edge.py) for extract brain sobel edge maps.
+
+  ```shell 
+  python ./Code/Inference/Step01_Intensity_2_Edge.py --input /path/to/input/brain.nii.gz --output /path/to/save/extracted/edge/maps
   ```
+After the data preprocess, your data directory should be:
+```shell
+Experiments/
+├── csvfile/                     # Training, validation, & testing splits
+│   └── file_list.csv            # Each line: [IDs, folder, fold]
+├── data/                        # Data folder
+│   ├── HCPA/
+│   │   └── sub001/
+│   │       ├── brain.nii.gz      # skull-stripped T1w data
+│   │       ├── brain_edge.nii.gz # extracted brain edge maps
+│   │       ├── tissue.nii.gz     # ground-truth tissue maps
+│   │       └── dk-struct.nii.gz  # ground-truth dk struture maps
+│   ├── HCPD/
+│   └── HCPY/
+└── Results/
+    └── BrainParc/
+        ├── checkpoints/        # Saved every 10 epochs
+        ├── log/
+        │   └── log
+        └── pred/               # Validation results per epoch
+```
 
-### Step 1: Brain Extraction
-* For model training and brain extraction inference please refer to the [AutoStrip](https://github.com/SaberPRC/AutoStrip) repo. 
-
-### Step 2: Model Training (BrainParc)
+### Step 3: Model Training (BrainParc)
 * Please find the implementation of BrainParc in ./Code folder with following format
   ```shell
   Code
@@ -79,11 +127,31 @@ The illsutration of BrainParc is shown in
       └── utils.py
   ```
 
-* Model training
+* Training scripts
   ```python
-  python -m torch.distributed.run --nproc_per_node=2 --nnodes=1 --master_port 10086 ./Code/trainSegNetMS_Joint_96_DDP.py --platform bme --save_path ParcJoint --file_list file_list.csv --batch_size 2 --resume -1 --weight 1
+  python -m torch.distributed.run --nproc_per_node=2 --nnodes=1 --master_port 10086 ./Code/trainSegNetMS_Joint_DDP.py --platform bme --save_path ParcJoint --file_list file_list.csv --batch_size 2 --resume -1 --weight 1
   ```
-## [<font color=#F8B48F size=3>License</font> ](./LICENSE)
+
+
+### Inference Using Pretrained Model
+We provided three infant and two child/adult samples in [Test_Sample](./Test_Samples). You can also test **BrainParc** on your own data structured as:
+
+```shell
+Test_Sample/
+├── sub001_infant_infantile/
+│   └── T1.nii.gz
+├── sub002_infant_isointense/
+│   └── T1.nii.gz
+├── sub003_infant_adult_like/
+│   └── T1.nii.gz
+├── sub004_child/
+│   └── T1.nii.gz
+└── sub005_adult/
+    └── T1.nii.gz
+```
+
+
+### [<font color=#F8B48F size=3>License</font> ](./LICENSE)
 ```shell
 Copyright IDEA Lab, School of Biomedical Engineering, ShanghaiTech University, Shanghai, China.
 
