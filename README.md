@@ -1,16 +1,28 @@
 ## BrainParc: Unified Lifespan Brain Region Parcellation
+Official implementation of Unified Lifespan Brain Region Parcellation from Structural MR Images (**BrainParc**)
 
-
+***
 > "[BrainParc: Unified Lifespan Brain Parcellation with Anatomy-guided Progressive Transmission](https://www.researchgate.net/publication/389177856_BrainParc_Unified_Lifespan_Brain_Parcellation_with_Anatomy-guided_Progressive_Transmission)", _ISMRM_, 2025, [Jiameng Liu, Feihong Liu, Kaicong Sun, Caiwen Jiang, Yulin Wang, Tianyang Sun, Feng Shi and <u>Dinggang Shen</u>]
 
 > "BrainParc: Unified Lifespan Brain Parcellation from Structural MR Images", [Jiameng Liu, Feihong Liu, Kaicong Sun, Zhiming Cui, Tianyang Sun, Zehong Cao, Jiawei Huang, Shuwei Bai, Yulin Wang, Kaicheng Zhang, Caiwen Jiang, Yuyan Ge, Han Zhang, Feng Shi and <u>Dinggang Shen</u>] (Under Review)
 
 ***
 <div style="text-align: center">
-  <img src="figure/framework.png" width="100%" alt="BrainParc Framework">
+  <img src="figure/abstract_figure.bmp" width="90%" alt="BrainParc Framework">
 </div>
 
-In this work, we proposed a full-stack, precise, longitudinally-consistent framework, BrainParc, for unified lifespan brain parcellation. Please find the following steps for implementation of this work.
+### Main Framework
+<div style="text-align: center">
+  <img src="figure/framework.bmp" width="90%" alt="BrainParc Framework">
+</div>
+The entire BrainParc framework includes two parts:
+1. **Brain extraction:** Automatic skull-strip (AutoStrip) method for lifespan T1w MRI data
+
+    * The implementation and pretrained weight for AutoStrip can be find in this [Repo](https://github.com/SaberPRC/AutoStrip), we didn's include this part in this repo.
+
+2. **Tissue segmentation and region parcellation**: Unified Lifespan Brain Region Parcellation (BrainParc) framework which leverage the anatomical information invariant to intensity and contrast, enabling accurate, robust, and longitudinally consistent parcellation across heterogeneous dataset without the need for fine-tuning.
+
+The illsutration of BrainParc is shown in 
 
 ### Data Preparation
 * Organize the data in the following format
