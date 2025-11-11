@@ -149,6 +149,25 @@ Test_Sample/
 └── sub005_adult/
     └── T1.nii.gz
 ```
+1. Skull-striping
+*  Please refer to [AutoStrip](https://github.com/SaberPRC/AutoStrip)
+*  The processed data folder should include the following files: 
+  
+    `T1.nii.gz`, `pesudo_brain.nii.gz`, `brain.nii.gz`
+
+2. Brain edge extraction
+    ```shell
+    python ./Code/Inference/Step01_Intensity_2_Edge.py --input ./Test_Samples/sub001_infant_infantile/brain.nii.gz --output ./Test_Samples/sub001_infant_infantile/brain_edge.nii.gz
+    ```
+    Run likewise for other data samples with appropriate `--input` and `--output` parameters. The processed data should include the following files:
+
+    `T1.nii.gz`, `pesudo_brain.nii.gz`, `brain.nii.gz`, `brain_edge.nii.gz`
+
+
+3. Tissue segmentation and region parcellation
+    ```shell
+    python 
+    ```
 
 
 ### [<font color=#F8B48F size=3>License</font> ](./LICENSE)
@@ -165,4 +184,3 @@ Repo for BrainParc: Unified Lifespan Brain Parcellation from Structural MR Image
 Contact: JiamengLiu.PRC@gmail.com
 ```
 
-p

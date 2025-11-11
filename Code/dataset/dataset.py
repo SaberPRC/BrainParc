@@ -23,7 +23,7 @@ class ParcBaseMS(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         file_name, folder = self.file_list[idx][0], self.file_list[idx][1]
         img_path = os.path.join(self.root, 'data', folder, file_name, 'brain.nii.gz')
-        edge_path = os.path.join(self.root, 'data', folder, file_name, 'brain_sober.nii.gz')
+        edge_path = os.path.join(self.root, 'data', folder, file_name, 'brain_edge.nii.gz')
         tissue_path = os.path.join(self.root, 'data', folder, file_name, 'tissue.nii.gz')
         dk_path = os.path.join(self.root, 'data', folder, file_name, 'dk-struct.nii.gz')
 
