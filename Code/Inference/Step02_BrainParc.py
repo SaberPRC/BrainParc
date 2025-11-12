@@ -8,7 +8,10 @@ import torch.nn as nn
 from numba import jit
 import scipy.ndimage as sndi
 import torch.nn.functional as F
+from skimage import measure
+from collections import Counter
 
+import scipy
 from tqdm import tqdm
 from IPython import embed
 from itertools import product
@@ -612,6 +615,93 @@ def _ants_img_info(img_path):
     return img.origin, img.spacing, img.direction, img.numpy()
 
 
+def _find_majority_element(arr, idx):
+    # 移除0并统计出现次数
+    filtered_arr = [num for num in arr if num != 0 and num != 100 and num!=idx]
+    count = Counter(filtered_arr)
+
+    # 找到出现最多的数
+    if count:
+        majority_element = max(count, key=count.get)  # 获取出现次数最多的元素
+        return majority_element, count[majority_element]
+    else:
+        return None, 0  # 如果全是0，返回None或其他适当值
+
+
+label_index = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 19, 20, 21, 22, 23, 24, 59, 60, 61, 62, 75, 76, 89, 90]
+
+def _seg_to_label(seg):
+    '''
+    TODO: Labeling each single annotation in one image (single label to multiple label)
+    :param seg: single label annotation (numpy data)
+    :return: multiple label annotation
+    '''
+    labels, num = measure.label(seg, return_num=True)
+    return labels, num
+
+
+def _select_top_k_region(img, k=2):
+    '''
+    TODO: Functions to select top k connection regions
+    :param img: numpy array with multiple regions
+    :param k: number of selected regions
+    :return: selected top k region data
+    '''
+    # seg to labels
+    labels, nums = _seg_to_label(img)
+    rec = list()
+
+    for idx in range(1, nums + 1):
+        subIdx = np.where(labels == idx)
+        rec.append(len(subIdx[0]))
+    rec_sort = rec.copy()
+    rec_sort.sort()
+
+    rec = np.array(rec)
+    index = np.where(rec >= rec_sort[-k])[0]
+    index = list(index)
+
+    for idx in index:
+        labels[labels == idx + 1] = 1000000
+
+    labels[labels != 1000000] = 0
+    labels[labels == 1000000] = 1
+
+    return labels
+
+
+def _dk_refine(source_dk_path, target_dk_path):
+    origin, spacing, direction, dk = _ants_img_info(source_dk_path)
+    for idx in label_index:
+        tmp = dk.copy()
+        tmp[tmp != idx] = 0
+        tmp[tmp == idx] = 1
+        labels, labels_number = _seg_to_label(tmp)
+
+        if labels_number == 1:
+            continue
+        else:
+            tmp_mask = _select_top_k_region(tmp, k=1)
+            tmp[tmp_mask != 0] = 0
+            tmp_label, tmp_num = _seg_to_label(tmp)
+            for tmp_idx in range(1, tmp_num + 1):
+                tmp_mask = tmp_label.copy()
+                tmp_mask[tmp_mask != tmp_idx] = 0
+                tmp_mask[tmp_mask == tmp_idx] = 1
+                tmp_mask_enlarged = scipy.ndimage.morphology.binary_dilation(tmp_mask)
+                tmp_mask_enlarged[tmp_mask != 0] = 0
+                neighborhood_index = np.where(tmp_mask_enlarged != 0)
+                neighborhood = dk[neighborhood_index]
+                majority_element, count_majority_element = _find_majority_element(neighborhood, idx)
+
+                if majority_element == None:
+                    continue
+                else:
+                    dk[tmp_mask != 0] = majority_element
+    dk = ants.from_numpy(dk, origin, spacing, direction)
+    ants.image_write(dk, target_dk_path)
+
+
 def _normalize_z_score(data, clip=True):
     '''
     funtions to normalize data to standard distribution using (data - data.mean()) / data.std()
@@ -658,14 +748,20 @@ def _model_init(args, model_path):
     model = model.to(args.device)
     model.load_state_dict(torch.load(model_path, map_location='cuda:0'))
     model.eval()
+    # model.half()
     return model
 
 
-@jit
-def _matrix_operation(pred_rec_tissue_s, model_out_parc_s, start_pos, batch_size):
-    pred_rec_tissue_s[:, start_pos[0]:start_pos[0] + batch_size[0], start_pos[1]:start_pos[1] + batch_size[1],
-    start_pos[2]:start_pos[2] + batch_size[2]] += model_out_parc_s[0, :, :, :, :]
-    return pred_rec_tissue_s
+def get_3d_hann_window(patch_size, device='cpu'):
+    """
+    生成一个 3D Hann (Hanning) window 权重，用于patch平滑融合。
+    """
+    wx = torch.hann_window(patch_size[0], periodic=False, device=device)
+    wy = torch.hann_window(patch_size[1], periodic=False, device=device)
+    wz = torch.hann_window(patch_size[2], periodic=False, device=device)
+    weight = wx[:, None, None] * wy[None, :, None] * wz[None, None, :]
+    weight = weight / weight.max()  # normalize to [0,1]
+    return weight
 
 
 def _get_pred(args, model, image):
@@ -677,113 +773,94 @@ def _get_pred(args, model, image):
 
     m = nn.ConstantPad3d(32, 0)
     batch_size = args.crop_size
+    weight_patch = get_3d_hann_window(batch_size).numpy()
 
     pos = calculate_patch_index((W, H, D), args.crop_size, overlap_ratio=args.overlap_ratio)
 
-    pred_rec_s = np.zeros((args.num_classes+1, W, H, D))
+    # pred_rec_boundary = np.zeros((args.num_classes+1, W, H, D))
+    pred_rec_tissue = np.zeros((4, W, H, D))
+    pred_rec_dk = np.zeros((args.num_classes+1, W, H, D))
 
-    for start_pos in pos:
-        patch = img[:,:,start_pos[0]:start_pos[0]+batch_size[0], start_pos[1]:start_pos[1]+batch_size[1], start_pos[2]:start_pos[2]+batch_size[2]]
-        _, _, _, _, model_out_parc_s, _ = model(patch)
-        model_out_parc_s = m(model_out_parc_s)
-        model_out_parc_s = model_out_parc_s.cpu().detach().numpy()
+    with torch.inference_mode(), torch.cuda.amp.autocast():
+        for start_pos in tqdm(pos):
+            patch = img[:,:,start_pos[0]:start_pos[0]+batch_size[0], start_pos[1]:start_pos[1]+batch_size[1], start_pos[2]:start_pos[2]+batch_size[2]]
+            patch = patch.to(args.device)
+            _, _, model_out_tissue_s, _, model_out_parc_s, _ = model(patch)
+            
+            model_out_tissue_s = m(model_out_tissue_s)
+            model_out_tissue_s = model_out_tissue_s.cpu().detach().numpy()
+            
+            model_out_parc_s = m(model_out_parc_s)
+            model_out_parc_s = model_out_parc_s.cpu().detach().numpy()
 
-        pred_rec_s = _matrix_operation(pred_rec_s, model_out_parc_s, start_pos, batch_size)
+            pred_rec_tissue[:, start_pos[0]:start_pos[0] + batch_size[0], start_pos[1]:start_pos[1] + batch_size[1], start_pos[2]:start_pos[2] + batch_size[2]] += model_out_tissue_s[0, :, :, :, :] * weight_patch
 
-    pred_rec_s = pred_rec_s[:, 32:W-32, 32:H-32, 32:D-32]
+            pred_rec_dk[:, start_pos[0]:start_pos[0] + batch_size[0], start_pos[1]:start_pos[1] + batch_size[1], start_pos[2]:start_pos[2] + batch_size[2]] += model_out_parc_s[0, :, :, :, :] * weight_patch
 
-    return pred_rec_s
+            del patch, model_out_parc_s, model_out_tissue_s
+            torch.cuda.empty_cache()
+
+    pred_rec_tissue = pred_rec_tissue[:, 32:W-32, 32:H-32, 32:D-32]
+    pred_rec_dk = pred_rec_dk[:, 32:W-32, 32:H-32, 32:D-32]
+
+    return pred_rec_tissue, pred_rec_dk
 
 
-def get_pred(args, model, img_path, edge_path):
+def get_pred(args, model, img_path, edge_path, target_tissue, target_dk):
     origin, spacing, direction, img = _ants_img_info(img_path)
     origin, spacing, direction, edge = _ants_img_info(edge_path)
+
     img = _normalize_z_score(img)
     edge = _normalize_z_score(edge)
+
     img = np.pad(img, ((32, 32), (32, 32), (32, 32)), 'constant')
     edge = np.pad(edge, ((32, 32), (32, 32), (32, 32)), 'constant')
-    img = torch.from_numpy(img).type(torch.float32)
-    edge = torch.from_numpy(edge).type(torch.float32)
-    img = img.to(args.device)
-    edge = edge.to(args.device)
 
-    img = img.unsqueeze(0)
-    edge = edge.unsqueeze(0)
+    img = torch.from_numpy(img).type(torch.float32).unsqueeze(0)
+    edge = torch.from_numpy(edge).type(torch.float32).unsqueeze(0)
 
     img = torch.cat([img, edge], dim=0)
 
-    pred_parc = _get_pred(args, model, img)
+    pred_tissue, pred_parc = _get_pred(args, model, img)
+
+    pred_tissue = pred_tissue.argmax(0)
+    pred_tissue = pred_tissue.astype(np.float32)
+    ants_img_pred_tissue = ants.from_numpy(pred_tissue, origin, spacing, direction)
 
     pred_parc = pred_parc.argmax(0)
     pred_parc = pred_parc.astype(np.float32)
     ants_img_pred_parc = ants.from_numpy(pred_parc, origin, spacing, direction)
 
+    ants.image_write(ants_img_pred_tissue, target_tissue)
+    ants.image_write(ants_img_pred_parc, target_dk)
 
-    return ants_img_pred_parc
-
-
-def _multi_layer_dice_coefficient(source, target, ep=1e-8):
-    '''
-    TODO: functions to calculate dice coefficient of multi class
-    :param source: numpy array (Prediction)
-    :param target: numpy array (Ground-Truth)
-    :return: vector of dice coefficient
-    '''
-    class_num = (target.max()+1).astype(int)
-
-    source = source.astype(int)
-    source = np.eye(class_num.astype(int))[source]
-    source = source[:,:,:,1:]
-    source = source.reshape((-1, class_num-1))
-
-    target = target.astype(int)
-    target = np.eye(class_num)[target]
-    target = target[:,:,:,1:]
-    target = target.reshape(-1, class_num-1)
-
-    intersection = 2 * np.sum(source * target, axis=0) + ep
-    union = np.sum(source, axis=0) + np.sum(target, axis=0) + ep
-
-    return intersection / union
-
-
-def _get_pred_parallel(args, model, source, target, item):
-    source_img_path = os.path.join(source, item, 'brain.nii.gz')
-    source_edge_path = os.path.join(source, item, 'brain_sober.nii.gz')
-    target_tissue_path = os.path.join(target, item, 'BrainParc_tissue.nii.gz')
-    target_dk_path = os.path.join(target, item, 'BrainParc_dk.nii.gz')
-
-    pred_parc = get_pred(args, model, source_img_path, source_edge_path)
-
-    ants.image_write(pred_parc, target_dk_path)
+    try:
+        _dk_refine(target_dk, target_dk)
+    except:
+        None
 
 
 if __name__ == '__main__':
-    import multiprocessing
-    from multiprocessing import Pool
-    from tqdm import tqdm
-
     parser = argparse.ArgumentParser(description='Inference Setting for Brain Tissue Segmentation and region parcellation')
     parser.add_argument('--num_classes', type=int, default=106, help='number of output channels')
     parser.add_argument('--num_modalities', type=int, default=2, help='number of input channels')
     parser.add_argument('--model_path', type=str,
-                        default='/public_bme/home/liujm/BrainParc/Results/Lifespan/ParcJoint/checkpoints/chk_160.pth.gz',
+                        default='/work/users/j/i/jiameng/uBEST/Model_Release/BrainParc/Pretrain_Model/BrainParc.pth.gz',
                         help='Pretrained model path')
     parser.add_argument('--device', type=str, default='cuda', help='specify device type: cuda or cpu?')
     parser.add_argument('--crop_size', type=tuple, default=(160, 160, 160), help='patch size')
-    parser.add_argument('--overlap_ratio', type=float, default=0.6, help='Overlap ratio to extract '
+    parser.add_argument('--overlap_ratio', type=float, default=0.5, help='Overlap ratio to extract '
                                                                           'patches for single image inference')
-    parser.add_argument('--num_modalities', type=int, default=2, help='number of input channels')
-    parser.add_argument('--input_brain', type=str, default='/path/to/input/image/brain/path', help='input brain data (skull-stripped)')
-    parser.add_argument('--input_edge', type=str, default='/path/to/input/image/edge/path', help='input brain edge map (sobel edge)')
-    parser.add_argument('--output_edge', type=str, default='/path/to/output/predicted/tissue/path', help='tissue save path')
-    parser.add_argument('--output_edge', type=str, default='/path/to/output/predicted/dk/path', help='dk save path')
+    parser.add_argument('--input_brain', type=str, default='/work/users/j/i/jiameng/uBEST/Model_Release/BrainParc/Test_Samples/sub005_adult/brain.nii.gz', help='input brain data (skull-stripped)')
+    parser.add_argument('--input_edge', type=str, default='/work/users/j/i/jiameng/uBEST/Model_Release/BrainParc/Test_Samples/sub005_adult/brain_edge.nii.gz', help='input brain edge map (sobel edge)')
+    parser.add_argument('--output_tissue', type=str, default='/work/users/j/i/jiameng/uBEST/Model_Release/BrainParc/Test_Samples/sub005_adult/tissue.nii.gz', help='tissue save path')
+    parser.add_argument('--output_dk', type=str, default='/work/users/j/i/jiameng/uBEST/Model_Release/BrainParc/Test_Samples/sub005_adult/dk-struct.nii.gz', help='dk save path')
 
     args = parser.parse_args()
 
+
     model = _model_init(args, args.model_path)
 
-    _get_pred_parallel(args, model, args.input_brain, args.input_edge, args.output_tissue, args.output_dk)
-
+    pred_tissue, pred_dk = get_pred(args, model, args.input_brain, args.input_edge, args.output_tissue, args.output_dk)
 
 

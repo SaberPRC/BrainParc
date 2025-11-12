@@ -166,8 +166,18 @@ Test_Sample/
 
 3. Tissue segmentation and region parcellation
     ```shell
-    python 
+    python ./Code/Inference/Step02_BrainParc.py --input_brain ./Test_Samples/sub001_infant_infantile/brain.nii.gz --input_edge ./Test_Samples/sub001_infant_infantile/brain_edge.nii.gz --output_tissue ./Test_Samples/sub001_infant_infantile/tissue.nii.gz --output_dk ./Test_Samples/sub001_infant_infantile/dk-struct.nii.gz
     ```
+   * --model_path: pretrained model path
+   * --input_brain: path to brain.nii.gz
+   * --input_edge: path to brain_edge.nii.gz
+   * --output_tissue: path to tissue.nii.gz
+   * --output_dk: path to dk-struct.nii.gz
+
+### Pretrained model
+
+You can download our pretrained model through the following link:
+* [BrainParc](https://drive.google.com/file/d/1lPccRLPmQrLfcEJ3SlNTRaySwc9Nwu4U/view?usp=sharing)
 
 
 ### [<font color=#F8B48F size=3>License</font> ](./LICENSE)
