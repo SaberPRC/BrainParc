@@ -846,16 +846,16 @@ if __name__ == '__main__':
     parser.add_argument('--num_classes', type=int, default=106, help='number of output channels')
     parser.add_argument('--num_modalities', type=int, default=2, help='number of input channels')
     parser.add_argument('--model_path', type=str,
-                        default='/work/users/j/i/jiameng/uBEST/Model_Release/BrainParc/Pretrain_Model/BrainParc.pth.gz',
+                        default='/path/to/Pretrain_Model/BrainParc.pth.gz',
                         help='Pretrained model path')
     parser.add_argument('--device', type=str, default='cuda', help='specify device type: cuda or cpu?')
     parser.add_argument('--crop_size', type=tuple, default=(160, 160, 160), help='patch size')
     parser.add_argument('--overlap_ratio', type=float, default=0.5, help='Overlap ratio to extract '
                                                                           'patches for single image inference')
-    parser.add_argument('--input_brain', type=str, default='/work/users/j/i/jiameng/uBEST/Model_Release/BrainParc/Test_Samples/sub005_adult/brain.nii.gz', help='input brain data (skull-stripped)')
-    parser.add_argument('--input_edge', type=str, default='/work/users/j/i/jiameng/uBEST/Model_Release/BrainParc/Test_Samples/sub005_adult/brain_edge.nii.gz', help='input brain edge map (sobel edge)')
-    parser.add_argument('--output_tissue', type=str, default='/work/users/j/i/jiameng/uBEST/Model_Release/BrainParc/Test_Samples/sub005_adult/tissue.nii.gz', help='tissue save path')
-    parser.add_argument('--output_dk', type=str, default='/work/users/j/i/jiameng/uBEST/Model_Release/BrainParc/Test_Samples/sub005_adult/dk-struct.nii.gz', help='dk save path')
+    parser.add_argument('--input_brain', type=str, default='/path/to/Test_Samples/sub005_adult/brain.nii.gz', help='input brain data (skull-stripped)')
+    parser.add_argument('--input_edge', type=str, default='/path/to/Test_Samples/sub005_adult/brain_edge.nii.gz', help='input brain edge map (sobel edge)')
+    parser.add_argument('--output_tissue', type=str, default='/path/to/Test_Samples/sub005_adult/tissue.nii.gz', help='tissue save path')
+    parser.add_argument('--output_dk', type=str, default='/path/to/Test_Samples/sub005_adult/dk-struct.nii.gz', help='dk save path')
 
     args = parser.parse_args()
 
