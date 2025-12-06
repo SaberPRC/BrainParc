@@ -5,7 +5,6 @@ import argparse
 import numpy as np
 import pandas as pd
 import torch.nn as nn
-from numba import jit
 import scipy.ndimage as sndi
 import torch.nn.functional as F
 from skimage import measure
@@ -15,7 +14,8 @@ import scipy
 from tqdm import tqdm
 from IPython import embed
 from itertools import product
-
+import warnings
+warnings.filterwarnings("ignore")
 
 mask_weight = np.zeros((160, 160, 160))
 mw, mh, md = mask_weight.shape
@@ -781,11 +781,12 @@ def _get_pred(args, model, image):
     pred_rec_tissue = np.zeros((4, W, H, D))
     pred_rec_dk = np.zeros((args.num_classes+1, W, H, D))
 
-    with torch.inference_mode(), torch.cuda.amp.autocast():
+    with torch.inference_mode():
         for start_pos in tqdm(pos):
             patch = img[:,:,start_pos[0]:start_pos[0]+batch_size[0], start_pos[1]:start_pos[1]+batch_size[1], start_pos[2]:start_pos[2]+batch_size[2]]
             patch = patch.to(args.device)
-            _, _, model_out_tissue_s, _, model_out_parc_s, _ = model(patch)
+            with torch.no_grad():
+                _, _, model_out_tissue_s, _, model_out_parc_s, _ = model(patch)
             
             model_out_tissue_s = m(model_out_tissue_s)
             model_out_tissue_s = model_out_tissue_s.cpu().detach().numpy()
@@ -861,6 +862,6 @@ if __name__ == '__main__':
 
     model = _model_init(args, args.model_path)
 
-    pred_tissue, pred_dk = get_pred(args, model, args.input_brain, args.input_edge, args.output_tissue, args.output_dk)
+    get_pred(args, model, args.input_brain, args.input_edge, args.output_tissue, args.output_dk)
 
 

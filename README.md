@@ -139,21 +139,19 @@ We provided three infant and two child/adult samples in [Test_Sample](./Test_Sam
 ```shell
 Test_Sample/
 ├── sub001_infant_infantile/
-│   └── T1.nii.gz
+│   └── brain.nii.gz
 ├── sub002_infant_isointense/
-│   └── T1.nii.gz
+│   └── brain.nii.gz
 ├── sub003_infant_adult_like/
-│   └── T1.nii.gz
+│   └── brain.nii.gz
 ├── sub004_child/
-│   └── T1.nii.gz
+│   └── brain.nii.gz
 └── sub005_adult/
-    └── T1.nii.gz
+    └── brain.nii.gz
 ```
 1. Skull-striping
-*  Please refer to [AutoStrip](https://github.com/SaberPRC/AutoStrip)
-*  The processed data folder should include the following files: 
-  
-    `T1.nii.gz`, `pesudo_brain.nii.gz`, `brain.nii.gz`
+*  Please first conduct skull-stripping on your own data using our [AutoStrip](https://github.com/SaberPRC/AutoStrip)
+
 
 2. Brain edge extraction
     ```shell
@@ -161,7 +159,7 @@ Test_Sample/
     ```
     Run likewise for other data samples with appropriate `--input` and `--output` parameters. The processed data should include the following files:
 
-    `T1.nii.gz`, `pesudo_brain.nii.gz`, `brain.nii.gz`, `brain_edge.nii.gz`
+  `brain.nii.gz`, `brain_edge.nii.gz`
 
 
 3. Tissue segmentation and region parcellation
@@ -179,6 +177,12 @@ Test_Sample/
 You can download our pretrained model through the following link:
 * [BrainParc](https://drive.google.com/file/d/1lPccRLPmQrLfcEJ3SlNTRaySwc9Nwu4U/view?usp=sharing)
 
+
+### ROI Index of BrainParc and Corresponding ROI Index of FreeSurfer
+* We segment MRI brain according to dk structrue atlas, each label in our BrainParc are shown below:
+<div style="text-align: center">
+  <img src="figure/Label_Correspondence.png" width="80%" alt="BrainParc Framework">
+</div>
 
 ### [<font color=#F8B48F size=3>License</font> ](./LICENSE)
 ```shell
