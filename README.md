@@ -4,7 +4,9 @@ Official implementation of Unified Lifespan Brain Region Parcellation from Struc
 ***
 > "[BrainParc: Unified Lifespan Brain Parcellation with Anatomy-guided Progressive Transmission](https://www.researchgate.net/publication/389177856_BrainParc_Unified_Lifespan_Brain_Parcellation_with_Anatomy-guided_Progressive_Transmission)", _ISMRM_, 2025, [Jiameng Liu, Feihong Liu, Kaicong Sun, Caiwen Jiang, Yulin Wang, Tianyang Sun, Feng Shi and <u>Dinggang Shen</u>]
 
-> "BrainParc: Unified Lifespan Brain Parcellation from Structural MR Images", _Nature Computation Science_, 2025, [Jiameng Liu, Feihong Liu, Kaicong Sun, Zhiming Cui, Tianyang Sun, Zehong Cao, Jiawei Huang, Shuwei Bai, Yulin Wang, Kaicheng Zhang, Caiwen Jiang, Yuyan Ge, Han Zhang, Feng Shi and <u>Dinggang Shen</u>]
+
+> "BrainParc: Unified Lifespan Brain Parcellation from Structural MR Images", [Jiameng Liu, Feihong Liu, Kaicong Sun, Zhiming Cui, Tianyang Sun, Zehong Cao, Jiawei Huang, Shuwei Bai, Yulin Wang, Yulong Dou, Kaicheng Zhang, Caiwen Jiang, Yuyan Ge, Han Zhang, Feng Shi and <u>Dinggang Shen</u>]
+
 
 ***
 <div style="text-align: center">
@@ -185,16 +187,20 @@ You can download our pretrained model through the following link:
 </div>
 
 ### [<font color=#F8B48F size=3>License</font> ](./LICENSE)
-```shell
+
+
+## 📞 Contact and License
+
+### License
 Copyright IDEA Lab, School of Biomedical Engineering, ShanghaiTech University, Shanghai, China.
 
-Licensed under the the GPL (General Public License);
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+This project is licensed under the **MIT License**. See the [LICENSE file](/SaberPRC/BrainParc/blob/main/LICENSE) for details.
 
-    http://www.apache.org/licenses/LICENSE-2.0
+### Contact
 
-Repo for BrainParc: Unified Lifespan Brain Parcellation from Structural MR Images
-Contact: JiamengLiu.PRC@gmail.com
+If you have any questions or suggestions, please feel free to contact the corresponding author:
+
+📧 **Jiameng Liu:** JiamengLiu.PRC@gmail.com
+
 ```
 
