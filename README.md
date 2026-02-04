@@ -166,13 +166,15 @@ Test_Sample/
 
 3. Tissue segmentation and region parcellation
     ```shell
-    python ./Code/Inference/Step02_BrainParc.py --input_brain ./Test_Samples/sub001_infant_infantile/brain.nii.gz --input_edge ./Test_Samples/sub001_infant_infantile/brain_edge.nii.gz --output_tissue ./Test_Samples/sub001_infant_infantile/tissue.nii.gz --output_dk ./Test_Samples/sub001_infant_infantile/dk-struct.nii.gz
+    python ./Code/Inference/Step02_BrainParc.py --input_brain ./Test_Samples/sub001_infant_infantile/brain.nii.gz --input_edge ./Test_Samples/sub001_infant_infantile/brain_edge.nii.gz --output_tissue ./Test_Samples/sub001_infant_infantile/tissue.nii.gz --output_dk ./Test_Samples/sub001_infant_infantile/dk-struct.nii.gz --norm_orientation 1 --norm_spacing 1 --standard_space [0.8, 0.8, 0.8]
     ```
    * --model_path: pretrained model path
    * --input_brain: path to brain.nii.gz
    * --input_edge: path to brain_edge.nii.gz
    * --output_tissue: path to tissue.nii.gz
    * --output_dk: path to dk-struct.nii.gz
+   * --norm_orientation: whether normalize image orientation to RPI, default=1
+   * --norm_spacing: whether normalize image spacing to standard_spacing, default=1
 
 ### Pretrained model
 
