@@ -6,10 +6,11 @@ import numpy as np
 import pandas as pd
 import torch.nn as nn
 import scipy.ndimage as sndi
+import SimpleITK as sitk
 import torch.nn.functional as F
 from skimage import measure
 from collections import Counter
-
+from pathlib import Path
 import scipy
 from tqdm import tqdm
 from IPython import embed
@@ -807,7 +808,74 @@ def _get_pred(args, model, image):
     return pred_rec_tissue, pred_rec_dk
 
 
-def get_pred(args, model, img_path, edge_path, target_tissue, target_dk):
+def _SoberEdge(source_img_path, target_img_path):
+    # TODO: normalize data according to z-score strategy
+    origin, spacing, direction, img = _ants_img_info(source_img_path)
+    img = _normalize_z_score(img)
+    img = ants.from_numpy(img, origin, spacing, direction)
+    ants.image_write(img, target_img_path)
+
+    # TODO: Generate edge map through Sober Operator
+    data_nii = sitk.ReadImage(target_img_path)
+    origin = data_nii.GetOrigin()
+    spacing = data_nii.GetSpacing()
+    direction = data_nii.GetDirection()
+
+    data_float_nii = sitk.Cast(data_nii, sitk.sitkFloat32)
+
+    sobel_op = sitk.SobelEdgeDetectionImageFilter()
+    sobel_sitk = sobel_op.Execute(data_float_nii)
+    sobel_sitk = sitk.Cast(sobel_sitk, sitk.sitkFloat32)
+
+    sobel_sitk.SetOrigin(origin)
+    sobel_sitk.SetSpacing(spacing)
+    sobel_sitk.SetDirection(direction)
+
+    sitk.WriteImage(sobel_sitk, target_img_path)
+
+
+def _resample_image(image_path, new_spacing=[1.0, 1.0, 1.0], new_size=None, interpolator=sitk.sitkLinear):
+    """
+    Resamples an image to the specified spacing and size.
+
+    Parameters:
+    - image: The SimpleITK image to be resampled.
+    - new_spacing: The desired spacing for each dimension (default is [1.0, 1.0, 1.0]).
+    - new_size: The desired size of the output image (optional).
+    - interpolator: The interpolation method to use (default is sitk.sitkLinear, and others: sitk.sitkNearestNeighbor, sitk.sitkLinear, sitk.sitkBSpline).
+
+    Returns:
+    - The resampled SimpleITK image.
+    """
+
+    # Get the original spacing and size
+    image = sitk.ReadImage(image_path)
+    original_spacing = image.GetSpacing()
+    original_size = image.GetSize()
+
+    # Calculate new size if not provided
+    if new_size is None:
+        new_size = [
+            int(round(original_size[i] * (original_spacing[i] / new_spacing[i])))
+            for i in range(len(original_size))
+        ]
+
+    # Define the resampling transform
+    resampler = sitk.ResampleImageFilter()
+    resampler.SetOutputSpacing(new_spacing)
+    resampler.SetSize(new_size)
+    resampler.SetOutputDirection(image.GetDirection())
+    resampler.SetOutputOrigin(image.GetOrigin())
+    resampler.SetInterpolator(interpolator)
+    resampler.SetDefaultPixelValue(0)  # Use 0 as the default background value
+
+    # Apply resampling
+    resampled_image = resampler.Execute(image)
+
+    return resampled_image
+
+
+def _inference(args, model, img_path, edge_path):
     origin, spacing, direction, img = _ants_img_info(img_path)
     origin, spacing, direction, edge = _ants_img_info(edge_path)
 
@@ -823,6 +891,59 @@ def get_pred(args, model, img_path, edge_path, target_tissue, target_dk):
     img = torch.cat([img, edge], dim=0)
 
     pred_tissue, pred_parc = _get_pred(args, model, img)
+
+    return pred_tissue, pred_parc
+
+
+def get_pred(args, model, img_path, edge_path, target_tissue, target_dk):
+    folder = os.path.dirname(img_path)
+
+    img_tmp_path = os.path.join(folder, 'brain_tmp.nii.gz')
+    img_tmp_RPI_path = os.path.join(folder, 'brain_tmp_RPI.nii.gz')
+    edge_tmp_path = os.path.join(folder, 'edge_tmp.nii.gz')
+    edge_tmp_RPI_path = os.path.join(folder, 'edge_tmp_RPI.nii.gz')
+
+    if not os.path.exists(edge_path):
+        _SoberEdge(img_path, edge_path)
+    
+    image_original = ants.image_read(img_path)
+    edge_original = ants.image_read(edge_path)
+
+    if args.norm_orientation == 1:
+        image_original = ants.reorient_image2(image_original, 'RPI')
+        ants.image_write(image_original, img_tmp_RPI_path)
+
+        edge_origingal = ants.reorient_image2(edge_origingal, 'RPI')
+        ants.image_write(edge_origingal, edge_tmp_RPI_path)
+
+    else:
+        img_tmp_RPI_path, edge_tmp_RPI_path = img_path, edge_path
+    
+    image_original = ants.image_read(img_path)
+
+    origin, spacing, direction, img = _ants_img_info(img_tmp_RPI_path)
+    shape = img.shape
+
+    if args.norm_spacing == 1:
+        resampled_img = _resample_image(img_tmp_RPI_path, new_spacing=args.standard_space)
+        sitk.WriteImage(resampled_img, img_tmp_path)
+        _SoberEdge(img_tmp_path, edge_tmp_path)
+
+        pred_tissue, pred_parc = _inference(args, model, img_tmp_path, edge_tmp_path)
+
+        pred_tissue = pred_tissue.unsqueeze(0)
+        pred_tissue = nn.functional.interpolate(pred_tissue, size=(shape[0], shape[1], shape[2]), mode='trilinear', antialias=False)
+        pred_tissue = pred_tissue.squeeze(0)
+
+        pred_parc = pred_parc.unsqueeze(0)
+        pred_parc = nn.functional.interpolate(pred_parc, size=(shape[0], shape[1], shape[2]), mode='trilinear', antialias=False)
+        pred_parc = pred_parc.squeeze(0)
+
+        os.system('rm {}'.format(img_tmp_path))
+        os.system('rm {}'.format(edge_tmp_path))
+
+    else:
+        pred_tissue, pred_parc = _inference(args, model, img_tmp_RPI_path, edge_tmp_RPI_path)
 
     pred_tissue = pred_tissue.argmax(0)
     pred_tissue = pred_tissue.astype(np.float32)
@@ -849,6 +970,9 @@ if __name__ == '__main__':
                         default='/path/to/Pretrain_Model/BrainParc.pth.gz',
                         help='Pretrained model path')
     parser.add_argument('--device', type=str, default='cuda', help='specify device type: cuda or cpu?')
+    parser.add_argument('--norm_orientation', type=int, default=1, help='normalize data to RPI space')
+    parser.add_argument('--norm_spacing', type=int, default=1, help='normalize to standard space')
+    parser.add_argument('--standard_space', type=list, default=[0.8, 0.8, 0.8], help='normalize to standard space')
     parser.add_argument('--crop_size', type=tuple, default=(160, 160, 160), help='patch size')
     parser.add_argument('--overlap_ratio', type=float, default=0.5, help='Overlap ratio to extract '
                                                                           'patches for single image inference')
