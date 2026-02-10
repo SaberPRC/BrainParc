@@ -913,8 +913,8 @@ def get_pred(args, model, img_path, edge_path, target_tissue, target_dk):
         image_original = ants.reorient_image2(image_original, 'RPI')
         ants.image_write(image_original, img_tmp_RPI_path)
 
-        edge_origingal = ants.reorient_image2(edge_origingal, 'RPI')
-        ants.image_write(edge_origingal, edge_tmp_RPI_path)
+        edge_original = ants.reorient_image2(edge_original, 'RPI')
+        ants.image_write(edge_original, edge_tmp_RPI_path)
 
     else:
         img_tmp_RPI_path, edge_tmp_RPI_path = img_path, edge_path
