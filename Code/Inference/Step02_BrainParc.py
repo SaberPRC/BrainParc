@@ -931,13 +931,18 @@ def get_pred(args, model, img_path, edge_path, target_tissue, target_dk):
 
         pred_tissue, pred_parc = _inference(args, model, img_tmp_path, edge_tmp_path)
 
+        pred_tissue = torch.from_numpy(pred_tissue).type(torch.float32)
+        pred_parc = torch.from_numpy(pred_parc).type(torch.float32) 
+
         pred_tissue = pred_tissue.unsqueeze(0)
         pred_tissue = nn.functional.interpolate(pred_tissue, size=(shape[0], shape[1], shape[2]), mode='trilinear', antialias=False)
         pred_tissue = pred_tissue.squeeze(0)
+        pred_tissue = pred_tissue.numpy()
 
         pred_parc = pred_parc.unsqueeze(0)
         pred_parc = nn.functional.interpolate(pred_parc, size=(shape[0], shape[1], shape[2]), mode='trilinear', antialias=False)
         pred_parc = pred_parc.squeeze(0)
+        pred_parc = pred_parc.numpy()
 
         os.system('rm {}'.format(img_tmp_path))
         os.system('rm {}'.format(edge_tmp_path))
@@ -952,6 +957,12 @@ def get_pred(args, model, img_path, edge_path, target_tissue, target_dk):
     pred_parc = pred_parc.argmax(0)
     pred_parc = pred_parc.astype(np.float32)
     ants_img_pred_parc = ants.from_numpy(pred_parc, origin, spacing, direction)
+
+    if args.norm_orientation == 1:
+        ants_img_pred_tissue = ants.reorient_image2(ants_img_pred_tissue, image_original.orientation)
+        ants_img_pred_parc = ants.reorient_image2(ants_img_pred_parc, image_original.orientation)
+        os.system('rm {}'.format(img_tmp_RPI_path))
+        os.system('rm {}'.format(edge_tmp_RPI_path))
 
     ants.image_write(ants_img_pred_tissue, target_tissue)
     ants.image_write(ants_img_pred_parc, target_dk)
